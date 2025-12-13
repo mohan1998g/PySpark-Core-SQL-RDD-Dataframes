@@ -16,7 +16,6 @@ windowspec = Window.partitionBy("employee_id").orderBy("year")
 resultdf = df.withColumn("last_year_salary", lag("salary", 1).over(windowspec))
 
 resultdf.show()
-
 salarydiff = (resultdf.withColumn("salary_diff", expr("salary-last_year_salary"))
               .select("employee_id", "year", "salary", "salary_diff"))
 

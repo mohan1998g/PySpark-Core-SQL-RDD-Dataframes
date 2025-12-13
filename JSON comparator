@@ -10,7 +10,7 @@ Handle differences—such as finding missing rows, columns, or differing values.
 
 Below is a detailed breakdown of how to compare two JSON files in PySpark:
 
--------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
 
 1. Loading JSON Files into Spark DataFrames
 You can load both JSON files into PySpark DataFrames using the spark.read.json() function.

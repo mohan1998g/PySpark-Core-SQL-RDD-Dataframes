@@ -94,7 +94,9 @@ df.agg(count("id").alias("count_id")).show()
 
 print("status column 1 and 0")
 spark.sql("select *,case when spendby='cash' then 1 else 0 end as status from df ").show()
-df.withColumn("status", expr("case when spendby ='cash' then 1 else 0 end as status")).show()
+df.withColumn("status", expr("case when spendby ='cash' then 1 else 0 end")).show()
+df.select(col(*), expr("case when spendby ='cash' then 1 else 0 end").alias("status")).show()
+df.select(col(*),when(spendby = 'cash', 1).otherwise(0).alias('status')).show()
 
 print("concat(id,'-',category)")
 spark.sql("select concat(id,'-',category) as concat from df ").show()

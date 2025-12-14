@@ -138,6 +138,8 @@ print("SUBSTRING_INDEX(category,' ',1)")
 spark.sql("select SUBSTRING_INDEX(category,' ',1) as spl from df").show()
 df.withColumn("spl", expr("SUBSTRING_INDEX(category,' ',1)")).show()
 
+add split function
+
 print("union all")
 spark.sql("select * from df union all select * from df1").show()
 df.unionAll(df1).show()

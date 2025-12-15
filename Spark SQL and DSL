@@ -144,6 +144,9 @@ print("union all")
 spark.sql("select * from df union all select * from df1").show()
 df.unionAll(df1).show()
 
+union - duplicate rows are removed from the final result
+unionAll - duplicate rows are present in the final result
+
 print("union")
 spark.sql("select * from df union select * from df1 order by id").show()
 df.union(df1).orderBy("category").show()

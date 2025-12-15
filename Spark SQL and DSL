@@ -185,26 +185,31 @@ print("row number")
 spark.sql("SELECT category,amount, row_number() "
           "OVER ( partition by category order by amount desc ) AS row_number FROM df").show()
 df.withColumn("row_number", row_number().over(window)).select("category", "amount", "row_number").show()
+df.withColumn("row_number", row_number().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "row_number").show()
 
 print("dense rank")
 spark.sql("SELECT category,amount, dense_rank() "
           "OVER ( partition by category order by amount desc ) AS dense_rank FROM df").show()
 df.withColumn("dense_rank", dense_rank().over(window)).select("category", "amount", "dense_rank").show()
+df.withColumn("dense_rank", dense_rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "dense_rank").show()
 
 print("rank")
 spark.sql("SELECT category,amount, rank()"
           "OVER ( partition by category order by amount desc ) AS rank FROM df").show()
 df.withColumn("rank", rank().over(window)).select("category", "amount", "rank").show()
+df.withColumn("rank", rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "rank").show()
 
 print("lead")
 spark.sql("SELECT category,amount, lead(amount) "
           "OVER ( partition by category order by amount desc ) AS lead FROM df").show()
 df.withColumn("lead", lead(col("amount")).over(window)).select("category", "amount", "lead").show()
+df.withColumn("lead", lead(col("amount")).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lead").show()
 
 print("lag")
 spark.sql("SELECT category,amount, lag(amount) "
           "OVER ( partition by category order by amount desc ) AS lag FROM df").show()
 df.withColumn("lag", lag("amount", 2).over(window)).select("category", "amount", "lag").show()
+df.withColumn("lag", lag("amount", 2).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lag").show()
 
 print("having")
 spark.sql("select category,count(category) as cnt from df group by category having count(category)>1").show()

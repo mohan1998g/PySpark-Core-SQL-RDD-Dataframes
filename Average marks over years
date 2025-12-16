@@ -4,7 +4,7 @@ schema = StructType([
         StructField("Id", IntegerType(), True),
         StructField("subject", StringType(), True),
         StructField("Marks", IntegerType(), True),
-        StructField("year", IntegerType(), True)
+        StructField("year", IntegerType(), false)
 ])
 
 # Data for the DataFrame

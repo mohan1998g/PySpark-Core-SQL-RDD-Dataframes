@@ -28,7 +28,7 @@ result = df.filter(
     ))
 )
 # result.show()
-# -----------------------my solution
+# ----------------------my solution
 df.persist()
 
 df1 = df.filter("status = 'dispatched'")

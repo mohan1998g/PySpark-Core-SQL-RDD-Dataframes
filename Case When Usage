@@ -33,5 +33,5 @@ customer_df.show()
 df = customer_df.withColumn("age_group", expr("case when age>=19 and age<=35 then '19-35' when age>=36 and age<=50 then '36-50' when age>50 then '51+' end"))
 df.show()
 
-countdf = df.groupby("age_group").agg(count("age_group").alias("count"))
+countdf = df.groupby("age_group").agg(count("age_group").alias("count of age group"))
 countdf.show()

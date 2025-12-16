@@ -1,3 +1,5 @@
+https://www.youtube.com/watch?v=yVOTP0gy7TU
+
 data = [
     (0, "06-26-2011", 300.4, "Exercise", "GymnasticsPro", "cash"),
     (1, "05-26-2011", 200.0, "Exercise Band", "Weightlifting", "credit"),
@@ -94,7 +96,9 @@ df.agg(count("id").alias("count_id")).show()
 
 print("status column 1 and 0")
 spark.sql("select *,case when spendby='cash' then 1 else 0 end as status from df ").show()
-df.withColumn("status", expr("case when spendby ='cash' then 1 else 0 end as status")).show()
+df.withColumn("status", expr("case when spendby ='cash' then 1 else 0 end")).show()
+df.select(col(*), expr("case when spendby ='cash' then 1 else 0 end").alias("status")).show()
+df.select(col(*),when(spendby = 'cash', 1).otherwise(0).alias('status')).show()
 
 print("concat(id,'-',category)")
 spark.sql("select concat(id,'-',category) as concat from df ").show()
@@ -136,9 +140,14 @@ print("SUBSTRING_INDEX(category,' ',1)")
 spark.sql("select SUBSTRING_INDEX(category,' ',1) as spl from df").show()
 df.withColumn("spl", expr("SUBSTRING_INDEX(category,' ',1)")).show()
 
+add split function
+
 print("union all")
 spark.sql("select * from df union all select * from df1").show()
 df.unionAll(df1).show()
+
+union - duplicate rows are removed from the final result
+unionAll - duplicate rows are present in the final result
 
 print("union")
 spark.sql("select * from df union select * from df1 order by id").show()
@@ -176,26 +185,31 @@ print("row number")
 spark.sql("SELECT category,amount, row_number() "
           "OVER ( partition by category order by amount desc ) AS row_number FROM df").show()
 df.withColumn("row_number", row_number().over(window)).select("category", "amount", "row_number").show()
+df.withColumn("row_number", row_number().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "row_number").show()
 
 print("dense rank")
 spark.sql("SELECT category,amount, dense_rank() "
           "OVER ( partition by category order by amount desc ) AS dense_rank FROM df").show()
 df.withColumn("dense_rank", dense_rank().over(window)).select("category", "amount", "dense_rank").show()
+df.withColumn("dense_rank", dense_rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "dense_rank").show()
 
 print("rank")
 spark.sql("SELECT category,amount, rank()"
           "OVER ( partition by category order by amount desc ) AS rank FROM df").show()
 df.withColumn("rank", rank().over(window)).select("category", "amount", "rank").show()
+df.withColumn("rank", rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "rank").show()
 
 print("lead")
 spark.sql("SELECT category,amount, lead(amount) "
           "OVER ( partition by category order by amount desc ) AS lead FROM df").show()
 df.withColumn("lead", lead(col("amount")).over(window)).select("category", "amount", "lead").show()
+df.withColumn("lead", lead(col("amount")).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lead").show()
 
 print("lag")
 spark.sql("SELECT category,amount, lag(amount) "
           "OVER ( partition by category order by amount desc ) AS lag FROM df").show()
 df.withColumn("lag", lag("amount", 2).over(window)).select("category", "amount", "lag").show()
+df.withColumn("lag", lag("amount", 2).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lag").show()
 
 print("having")
 spark.sql("select category,count(category) as cnt from df group by category having count(category)>1").show()

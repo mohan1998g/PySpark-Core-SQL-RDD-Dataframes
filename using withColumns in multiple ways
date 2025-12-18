@@ -58,12 +58,35 @@ threshold_map = {
 
 # 2. Use a dictionary comprehension to build the logic
 # This creates new columns (e.g., 'math_score_status') based on individual thresholds
+syntax 1:
 logic_map = {
     f"{c}_status": when(col(c) >= limit, "PASS").otherwise("FAIL")
     for c, limit in threshold_map.items()
 }
 
+syntax 2
+logic_map = {
+    f"{c}_status": when(
+        coalesce(col(c), lit(0)) >= lit(limit),
+        lit("PASS")
+    ).otherwise(lit("FAIL"))
+    for c, limit in threshold_map.items()
+}
+Why this matters
+when(condition, value) → both condition and value must be Column
+Python strings ("PASS") are not automatically converted to Spark columns
+lit() wraps Python values into Spark Columns
+
 # 3. Apply all transformations at once for high performance
+spark <=3.3
+from pyspark.sql.functions import col
+
+df = df.select(
+    "*",
+    *[expr.alias(name) for name, expr in logic_map.items()]
+)
+
+spark>=3.4
 df = df.withColumns(logic_map)
 Use code with caution.
 

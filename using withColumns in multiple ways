@@ -1,6 +1,6 @@
 1. Using a Dictionary with withColumns() (Recommended)
 This is the cleanest and most efficient way to perform multiple transformations in a single call. 
-```python
+
 from pyspark.sql.functions import col, when
 
 # Define the columns you want to transform
@@ -11,7 +11,7 @@ status_map = {
     f"{c}_status": when(col(c) >= 60, "PASS").otherwise("FAIL") 
     for c in score_cols
 }
-```
+
 # Apply all at once
 df = df.withColumns(status_map)
 Use code with caution.

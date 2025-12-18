@@ -1,6 +1,6 @@
 1. Using a Dictionary with withColumns() (Recommended)
 This is the cleanest and most efficient way to perform multiple transformations in a single call. 
-```
+```python
 from pyspark.sql.functions import col, when
 
 # Define the columns you want to transform

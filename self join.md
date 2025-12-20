@@ -7,6 +7,8 @@ t1 = spark.createDataFrame(data, columns)
 t2 = spark.createDataFrame(data, columns)
 
 # Perform a self-join with a condition to avoid duplicates
+
+```
 result1 = (t1.alias("t1").join(t2.alias("t2"),col("t1.Country") > col("t2.Country"))
             .select(col("t1.Country").alias("Country1"), col("t2.Country").alias("Country2")))
 
@@ -39,6 +41,7 @@ result2.show()
 |Australia|Pakistan|
 | Pakistan|Srilanka|
 +---------+--------+
+```
 
 alias("t1") and alias("t2"):
 

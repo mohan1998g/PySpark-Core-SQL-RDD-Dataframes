@@ -1,0 +1,110 @@
+there are 3 types of complexities
+1. multiline - damn easy
+2. struct - easy
+3. array - bit tough
+
+the difference between struct and array is data enclosing ways
+struct data is enclosed by {.........} ---  we use .(dot) to unflatten it
+array data is enclosed by  [.........] ---  we use explode to unflatten it
+
+**MULTILINE**
+
+just enable multiline option to true for files
+
+**struct**
+
+[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "explode(address)" due to data type mismatch: Parameter 1 requires the ("ARRAY" or "MAP") type, however "address" has the type "STRUCT<city: STRING, street: STRING>".;
+
+example 1: 
+`code`
+rom pyspark.sql import functions as F, types as T
+
+schema = T.StructType([
+    T.StructField("id", T.IntegerType()),
+    T.StructField("name", T.StringType())
+])
+
+raw = spark.createDataFrame([('{"id":1,"name":"sudhir"}',)], ["json_str"])
+df_parsed = raw.select(F.from_json("json_str", schema).alias("user"))
+df_parsed.show(truncate=False)
+df_parsed.printSchema()
+
+-----------------------------------------------------------------------------------------------
+
+ json_str = '''{
+    "id": 1,
+    "name": "sudhir",
+    "address": {
+        "street": "123 Main St",
+        "city": "Sampleville"
+    }
+}'''
+>>> rdd = spark.sparkContext.parallelize([json_str])
+>>> df = spark.read.json(rdd)
+>>> print(df.show())
++--------------------+---+------+
+|             address| id|  name|
++--------------------+---+------+
+|{Sampleville, 123...|  1|sudhir|
++--------------------+---+------+
+ from pyspark.sql.functions import col
+method 1:
+flattened_df = df.select(
+...     col('id'),
+...     col('name'),
+...     col('address.city').alias('city'),
+...     col('address.street').alias('street')
+... ) 
+>>>
+>>> flattened_df.show()
++---+------+-----------+-----------+
+| id|  name|       city|     street|
++---+------+-----------+-----------+
+|  1|sudhir|Sampleville|123 Main St|
++---+------+-----------+-----------+
+
+method 2:
+flattened_df = df.selectExpr("id","name","address.city","address.street")
+>>> flattened_df.printSchema()
+root
+ |-- id: long (nullable = true)
+ |-- name: string (nullable = true)
+ |-- city: string (nullable = true)
+ |-- street: string (nullable = true)
+
+>>> flattened_df.show()
++---+------+-----------+-----------+
+| id|  name|       city|     street|
++---+------+-----------+-----------+
+|  1|sudhir|Sampleville|123 Main St|
++---+------+-----------+-----------+
+
+---------------------------------------------------------------------------------
+json_str = '''{
+    "id": 1,
+    "name": "sudhir",
+    "address": {
+        "user":{
+            "street": "123 Main St",
+            "city": "Sampleville"
+    }
+    }
+}'''
+ rdd = spark.sparkContext.parallelize([json_str])
+>>>
+>>> df = spark.read.json(rdd)
+>>> df.show()
++--------------------+---+------+
+|             address| id|  name|
++--------------------+---+------+
+|{{Sampleville, 12...|  1|sudhir|
++--------------------+---+------+
+
+flattened_df = df.selectExpr("id","name","address.user.city","address.user.street")
+
+flattened_df.show()
++---+------+-----------+-----------+
+| id|  name|       city|     street|
++---+------+-----------+-----------+
+|  1|sudhir|Sampleville|123 Main St|
++---+------+-----------+-----------+

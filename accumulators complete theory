@@ -1,0 +1,134 @@
+In PySpark, accumulators are distributed shared variables used for aggregating information across worker nodes in the cluster. They are mainly designed for numeric sums, counters, and monitoring/debugging purposes.
+Core Characteristics:
+
+Write-only from workers – Tasks running on executor nodes can only update accumulators.
+Read-only from driver – The driver reads the final aggregated value after all tasks have completed.
+Fault tolerance – Updates to accumulators might occur more than once if tasks are re-executed due to failures, so they should not be used in core logic where exact-once updates are essential.
+Global scope – Can track values across the entire job execution.
+Thread-safe aggregation – Implemented in a way that multiple tasks can safely update them.
+
+Uses:
+
+Counting processed records.
+Tracking errors or exceptions.
+Debugging large-scale jobs.
+Monitoring pipeline performance.
+Summing values across RDD/DataFrame transformations.
+
+Types:
+
+Legacy Accumulators
+
+Example: `sc.accumulator(0)` for integers.
+Meant primarily for numeric aggregation.
+
+
+AccumulatorV2 (introduced in Spark 2.0)
+
+More flexible, supports custom data types.
+You can define custom add/merge logic.
+
+
+
+AccumulatorV2 Structure:
+
+`isZero()` – Checks if accumulator is in its zero state.
+`copy()` – Creates a copy.
+`reset()` – Resets to zero state.
+`add(value)` – Adds/updates data.
+`merge(other)` – Merges another accumulator.
+`value` – Returns the aggregated value.
+
+Limitations:
+
+Updates are for side-effects only, not for changing main computation logic.
+Driver’s `value` is only updated after actions (`collect`, `foreach`, etc.), not during transformations.
+Not guaranteed exactly-once semantics if tasks retry.
+
+Example:
+pythonfrom pyspark import SparkContext
+sc = SparkContext("local", "Acc Example")
+
+acc = sc.accumulator(0)
+
+rdd = sc.parallelize([1, 2, 3, 4])
+rdd.foreach(lambda x: acc.add(x))
+print(acc.value)  # Output: 10
+
+Best Practices:
+
+Use for metrics/logging, not critical logic.
+Prefer `AccumulatorV2` if you need complex aggregation.
+Keep updates idempotent when possible.
+Monitor accumulators in production jobs to track custom KPIs.
+
+usages
+
+Here’s a complete example demonstrating how to use the `AccumulatorV2` methods `isZero()`, `copy()`, `reset()`, `add(value)`, `merge(other)`, and `value` in PySpark:
+pythonfrom pyspark import SparkContext, AccumulatorV2
+
+# Custom accumulator for summing integers
+class IntAccumulator(AccumulatorV2):
+    def __init__(self, initial_value=0):
+        self._value = initial_value
+    
+    def isZero(self):
+        return self._value == 0
+    
+    def copy(self):
+        return IntAccumulator(self._value)
+    
+    def reset(self):
+        self._value = 0
+    
+    def add(self, val):
+        self._value += val
+    
+    def merge(self, other):
+        self._value += other._value
+    
+    def value(self):
+        return self._value
+
+# Initialize SparkContext
+sc = SparkContext("local", "AccumulatorV2Example")
+
+# Register accumulator
+acc = sc.register(IntAccumulator(), "MyAccumulator")
+
+print("Initial isZero:", acc.isZero())  # True initially
+
+# Parallel data
+rdd = sc.parallelize([1, 2, 3, 4])
+
+# Add values
+rdd.foreach(lambda x: acc.add(x))
+print("Value after add:", acc.value())  # 10
+
+# Using copy()
+acc_copy = acc.copy()
+print("Copied accumulator value:", acc_copy.value())  # 10
+
+# Reset accumulator
+acc.reset()
+print("Value after reset:", acc.value())  # 0
+print("isZero after reset:", acc.isZero())  # True
+
+# Demonstrate merge()
+acc1 = IntAccumulator()
+acc1.add(5)
+acc2 = IntAccumulator()
+acc2.add(7)
+acc1.merge(acc2)
+print("Merged value:", acc1.value())  # 12
+
+Explanation:
+
+`isZero()` → Checks if the accumulator is in its initial state.
+`copy()` → Creates a duplicate with the current value.
+`reset()` → Resets to zero state.
+`add(value)` → Increments or updates the accumulator.
+`merge(other)` → Combines another accumulator instance into the current one.
+`value` → Retrieves the aggregated result.
+
+This pattern is very useful when you need custom aggregation logic beyond simple numeric sums, such as collecting sets, lists, or complex metrics in PySpark jobs.

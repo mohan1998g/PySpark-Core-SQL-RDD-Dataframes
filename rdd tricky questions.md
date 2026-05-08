@@ -304,3 +304,119 @@ rdd.filter(lambda x: x).collect()
 ✅ *“RDDs are unordered unless explicitly sorted”*
 
 ***
+Let’s explain this **step by step**, because this is a **classic PySpark trick question** that tests understanding of **how `filter` works in Python**.
+
+***
+
+## ✅ Code to Explain
+
+```python
+rdd = sc.parallelize([1, 2, 3, 4])
+rdd.filter(lambda x: x % 2).collect()
+```
+
+***
+
+## ✅ Step 1: Understand the RDD
+
+```python
+rdd = sc.parallelize([1, 2, 3, 4])
+```
+
+The RDD contains:
+
+```text
+[1, 2, 3, 4]
+```
+
+***
+
+## ✅ Step 2: How `filter()` Works
+
+```python
+filter(func)
+```
+
+*   `filter` keeps an element **only if the function returns `True`**
+*   In Python:
+    *   `0` is **False**
+    *   Any **non‑zero number** is **True**
+
+***
+
+## ✅ Step 3: Evaluate the Lambda Function
+
+Lambda:
+
+```python
+lambda x: x % 2
+```
+
+This returns:
+
+*   `1` for **odd** numbers
+*   `0` for **even** numbers
+
+Let’s apply it element by element:
+
+| x | x % 2 | Boolean Value | Kept? |
+| - | ----- | ------------- | ----- |
+| 1 | 1     | True          | ✅     |
+| 2 | 0     | False         | ❌     |
+| 3 | 1     | True          | ✅     |
+| 4 | 0     | False         | ❌     |
+
+***
+
+## ✅ Final Output
+
+```python
+rdd.filter(lambda x: x % 2).collect()
+```
+
+✅ **Output**
+
+```text
+[1, 3]
+```
+
+***
+
+## 🚨 Why This Is a Trick Question
+
+Many people think `filter` **must return a boolean**, but in Python:
+
+*   `1` → treated as `True`
+*   `0` → treated as `False`
+
+So this works **even though the lambda does not explicitly return `True` or `False`**.
+
+***
+
+## ✅ Recommended (Clearer) Version
+
+For readability and interviews, write this instead:
+
+```python
+rdd.filter(lambda x: x % 2 != 0).collect()
+```
+
+✅ Output:
+
+```text
+[1, 3]
+```
+
+***
+
+## ✅ Interview‑Perfect Explanation (Say This)
+
+> “`filter` keeps elements for which the lambda returns a truthy value. Since `x % 2` returns `1` for odd numbers and `0` for even numbers, only odd numbers pass the filter.”
+
+***
+
+## ✅ Key Takeaway
+
+*   `filter` checks **truthiness**, not strictly `True/False`
+*   `0`, `None`, `""`, `False` → filtered out
+*   Non‑zero numbers → kept

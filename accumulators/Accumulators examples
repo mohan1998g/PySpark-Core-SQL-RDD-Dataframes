@@ -1,4 +1,11 @@
 Sure! Here’s a collection of examples showing different ways accumulators can be used in PySpark:
+
+Accumulators are created using sparkContext as
+
+pythonfrom pyspark import SparkContext
+sc = SparkContext("local", "Accumulator Example")
+accumulator_name = sc.accumulator(0)
+
 1. Sum of numbers (basic accumulator)
 pythonfrom pyspark import SparkContext
 sc = SparkContext("local", "Accumulator Example")

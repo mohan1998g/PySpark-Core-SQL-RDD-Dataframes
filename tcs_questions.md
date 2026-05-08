@@ -272,10 +272,3 @@ rdd.keyBy(lambda x: x % 2) \
 ✅ Confidence > buzzwords
 
 ***
-
-If you want next (very useful):
-✅ **TCS Spark interview mock (full Q\&A simulation)**  
-✅ **Resume points for Spark roles in TCS**  
-✅ **Client‑project story templates**
-
-Just tell me which one 💪

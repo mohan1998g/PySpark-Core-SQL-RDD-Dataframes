@@ -107,7 +107,6 @@ Assume SparkContext is already created:
 ```python
 rdd = sc.parallelize([1, 2, 3, 4, 5])
 ```
-Below are the **exact outputs** for **each of the 25 lambda-based PySpark RDD examples** I shared earlier.  
 Assumptions:
 
 *   Spark runs locally

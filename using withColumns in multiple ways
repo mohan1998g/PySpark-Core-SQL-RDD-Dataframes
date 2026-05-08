@@ -1,0 +1,445 @@
+1. Using a Dictionary with withColumns() (Recommended)
+This is the cleanest and most efficient way to perform multiple transformations in a single call. 
+
+```
+from pyspark.sql.functions import col, when
+
+# Define the columns you want to transform
+score_cols = ["math_score", "science_score", "history_score"]
+
+# Create a dictionary: { "new_col_name": logic }
+status_map = {
+    f"{c}_status": when(col(c) >= 60, "PASS").otherwise("FAIL") 
+    for c in score_cols
+}
+```
+
+# Apply all at once
+df = df.withColumns(status_map)
+Use code with caution.
+
+2. Using a Loop with withColumn (Less Efficient)
+While easy to read, this is slower because Spark must rebuild the DataFrame for every iteration. Use this only if you have very few columns. 
+python
+for c in score_cols:
+    df = df.withColumn(f"{c}_status", when(col(c) >= 60, "PASS").otherwise("FAIL"))
+Use code with caution.
+
+3. Using List Comprehension with select()
+This is the most "Spark-native" way to optimize performance, as it executes all changes in a single pass. 
+python
+# Keep original columns (*) and add the new calculated ones
+new_cols = [
+    when(col(c) >= 60, "PASS").otherwise("FAIL").alias(f"{c}_status") 
+    for c in score_cols
+]
+
+df = df.select("*", *new_cols)
+Use code with caution.
+
+Summary Comparison
+Method 	Spark Version	Performance	Best Use Case
+withColumns()	3.3+	Excellent	Modern PySpark; clean dictionary syntax.
+select()	All	Excellent	Highest performance for many columns.
+withColumn Loop	All	Poor	Small datasets or quick prototyping.
+
+In PySpark 3.3+, the most efficient way to apply different thresholds to various columns is by using withColumns() with a dictionary comprehension. 
+Applying Variable Thresholds
+This method maps each column to its specific threshold logic in a single transformation pass.
+python
+from pyspark.sql.functions import col, when
+
+# 1. Define your specific thresholds in a lookup dictionary
+threshold_map = {
+    "math_score": 60,
+    "science_score": 70,
+    "history_score": 50
+}
+
+# 2. Use a dictionary comprehension to build the logic
+# This creates new columns (e.g., 'math_score_status') based on individual thresholds
+syntax 1:
+logic_map = {
+    f"{c}_status": when(col(c) >= limit, "PASS").otherwise("FAIL")
+    for c, limit in threshold_map.items()
+}
+
+syntax 2
+logic_map = {
+    f"{c}_status": when(
+        coalesce(col(c), lit(0)) >= lit(limit),
+        lit("PASS")
+    ).otherwise(lit("FAIL"))
+    for c, limit in threshold_map.items()
+}
+Why this matters
+when(condition, value) → both condition and value must be Column
+Python strings ("PASS") are not automatically converted to Spark columns
+lit() wraps Python values into Spark Columns
+
+# 3. Apply all transformations at once for high performance
+spark <=3.3
+from pyspark.sql.functions import col
+
+df = df.select(
+    "*",
+    *[expr.alias(name) for name, expr in logic_map.items()]
+)
+
+spark>=3.4
+df = df.withColumns(logic_map)
+Use code with caution.
+
+Why use this approach?
+Performance: Unlike calling .withColumn() multiple times in a loop, withColumns() executes all changes in one logical step, reducing overhead on the Spark optimizer.
+Flexibility: You can easily add more columns to threshold_map without changing your main processing code.
+Safety: If you want to replace the original columns instead of creating new ones, simply remove the _status suffix in the dictionary key: c: when(col(c) >= limit, "PASS").otherwise("FAIL"). 
+Would you like to see how to handle missing (null) values in these scores so they don't default to "FAIL"?
+
+In PySpark, comparison operators like >= return null if the input value is null, which eventually causes your logic to default to the .otherwise("FAIL") result. 
+To handle this more effectively for 2025 data engineering standards, you can explicitly check for nulls using .isNull() or use coalesce to provide a safe default before comparing.
+Method 1: Explicit Null Category (Recommended)
+This approach adds a third status, such as "MISSING" or "INCOMPLETE", ensuring nulls aren't incorrectly categorized as failures. 
+python
+from pyspark.sql.functions import col, when
+
+threshold_map = {"math_score": 60, "science_score": 70}
+
+logic_map = {
+    f"{c}_status": when(col(c).isNull(), "MISSING")
+                  .when(col(c) >= limit, "PASS")
+                  .otherwise("FAIL")
+    for c, limit in threshold_map.items()
+}
+
+df = df.withColumns(logic_map)
+Use code with caution.
+
+Method 2: Coalesce to a Default Value
+If you want nulls to be treated as a specific numeric value (like 0) before the threshold is applied, use coalesce. 
+python
+from pyspark.sql.functions import col, when, coalesce, lit
+
+# Treats all nulls as 0, effectively marking them as "FAIL"
+logic_map = {
+    f"{c}_status": when(coalesce(col(c), lit(0)) >= limit, "PASS").otherwise("FAIL")
+    for c, limit in threshold_map.items()
+}
+Use code with caution.
+
+Key Differences in Behavior
+Method	Handling of Null Values	Resulting Status
+Standard Logic	Passed to otherwise	"FAIL"
+Explicit Logic	Caught by .isNull()	"MISSING"
+Coalesce (0)	Converted to 0	"FAIL" (since 0 < threshold)
+Should we explore how to flag rows where ALL scores are missing, or is per-column handling sufficient?
+
+To flag rows where all specified columns are missing (null), you can use a single condition that checks for a complete absence of data across those columns. For 2025 data workflows, the most efficient and readable methods involve using array functions or coalesce.
+Method 1: Using coalesce (Best Performance)
+The coalesce function returns the first non-null value from a list of columns. If all columns in the list are null, coalesce itself returns null. 
+python
+from pyspark.sql.functions import coalesce, col, when
+
+score_cols = ["math_score", "science_score", "history_score"]
+
+# If all scores are null, coalesce(score_cols) will be null
+df = df.withColumn(
+    "all_missing", 
+    when(coalesce(*score_cols).isNull(), True).otherwise(False)
+)
+Use code with caution.
+
+Method 2: Counting Nulls per Row
+If you want more detail (e.g., flagging rows with more than a certain number of missing values), you can sum the nulls across the columns.
+python
+from pyspark.sql.functions import col
+
+# sum(1 for each null)
+null_count = sum(col(c).isNull().cast("int") for c in score_cols)
+
+df = df.withColumn("is_fully_empty", null_count == len(score_cols))
+Use code with caution.
+
+Summary of Actions for Missing Data
+If you simply want to remove these rows instead of just flagging them, PySpark provides built-in shortcuts:
+Remove rows where ALL columns are null: Use df.dropna(how='all').
+Remove rows where specified score columns are ALL null:
+python
+df.dropna(how='all', subset=["math_score", "science_score", "history_score"])
+Use code with caution.
+
+ 
+Would you like to see how to calculate a "Total Score" that ignores null values instead of resulting in a null sum?
+
+In PySpark, adding columns with standard arithmetic (e.g., col("A") + col("B")) will result in null if any of the values are null. 
+To calculate a Total Score that treats nulls as 0 (effectively ignoring them), use one of the following 2025-standard methods:
+Method 1: Using coalesce (Safest)
+The coalesce function replaces nulls with a default value (like 0) during the addition without permanently changing your original data. 
+python
+from pyspark.sql.functions import col, coalesce, lit
+
+score_cols = ["math_score", "science_score", "history_score"]
+
+# Sum all columns, treating nulls as 0
+df = df.withColumn("total_score", 
+    sum(coalesce(col(c), lit(0)) for c in score_cols)
+)
+Use code with caution.
+
+Method 2: High-Performance aggregate (Modern Spark)
+For DataFrames with many columns, using Spark's built-in aggregate function on an array is more efficient than chaining many + operations. 
+python
+from pyspark.sql.functions import array, expr
+
+# Combines scores into an array and sums non-null elements
+df = df.withColumn("total_score", 
+    expr("aggregate(array(math_score, science_score, history_score), 0.0, (acc, x) -> acc + coalesce(x, 0))")
+)
+Use code with caution.
+
+Comparison of Results
+Row Data (Math, Science)	Standard Sum (A + B)	Coalesce Sum
+(80, 70)	150	150
+(80, null)	null	80
+(null, null)	null	0
+Should we look at how to calculate the Average Score while correctly ignoring nulls (so the divisor only counts non-null subjects)?
+
+To calculate a row-wise average while ignoring nulls, you must divide the total sum by the count of non-null subjects for each specific row. 
+If you use a static divisor (like 3), your average will be incorrectly lowered by missing data.
+2025 Recommended Method: The "Sum/Count" Approach
+This method is compatible with all Spark versions and is highly readable.
+python
+from pyspark.sql.functions import col, coalesce, lit
+
+score_cols = ["math_score", "science_score", "history_score"]
+
+# 1. Calculate the sum (treating nulls as 0)
+row_sum = sum(coalesce(col(c), lit(0)) for c in score_cols)
+
+# 2. Count how many columns are NOT null for that specific row
+non_null_count = sum(col(c).isNotNull().cast("int") for c in score_cols)
+
+# 3. Calculate Average (use nullif or a check to avoid division by zero)
+df = df.withColumn("avg_score", 
+    when(non_null_count > 0, row_sum / non_null_count).otherwise(None)
+)
+Use code with caution.
+
+Modern Method (Spark 3.1+): Higher-Order Functions
+For complex workflows, you can use aggregate to perform the entire calculation in a single pass over an array. 
+python
+from pyspark.sql.functions import array, expr
+
+# Combines scores into an array, filters nulls, and calculates the mean
+df = df.withColumn("avg_score", 
+    expr("""
+        aggregate(
+            filter(array(math_score, science_score, history_score), x -> x IS NOT NULL),
+            cast(0 as double),
+            (acc, x) -> acc + x,
+            acc -> acc / size(filter(array(math_score, science_score, history_score), x -> x IS NOT NULL))
+        )
+    """)
+)
+Use code with caution.
+
+Comparison of Calculation
+Row Data (Math, Science, History)	Standard (A+B+C)/3	Null-Aware Average
+(80, 70, 90)	80.0	80.0
+(80, 70, null)	null	75.0 (Sum 150 / Count 2)
+(80, null, null)	null	80.0 (Sum 80 / Count 1)
+Would you like to see how to automatically "impute" or fill these null values with the column-wide average before you do any calculations?
+
+In 2025, the most efficient and scalable way to impute nulls with column averages in PySpark is using the Imputer class from the Machine Learning library (pyspark.ml). This is preferred over manual agg and fillna loops because it is optimized for large datasets and handles multiple columns in a single transformation. 
+Method 1: Using PySpark Imputer (Recommended)
+This approach is highly performant and allows you to set a strategy like "mean", "median", or "mode". 
+python
+from pyspark.ml.feature import Imputer
+
+# Define columns to impute
+score_cols = ["math_score", "science_score", "history_score"]
+
+# Configure the imputer
+imputer = Imputer(
+    inputCols=score_cols, 
+    outputCols=score_cols, # Overwrites original columns
+    strategy="mean"        # Options: "mean", "median", "mode"
+)
+
+# Fit and transform
+df = imputer.fit(df).transform(df)
+Use code with caution.
+
+Method 2: Manual agg + fillna (Best for Small Datasets)
+If you prefer not to use the ML library, you can calculate the means manually and pass them as a dictionary to fillna. 
+python
+from pyspark.sql.functions import mean
+
+# Calculate means for specific columns
+mean_row = df.agg(*(mean(c).alias(c) for c in score_cols)).first()
+mean_dict = mean_row.asDict()
+
+# Fill nulls using the dictionary
+df = df.fillna(mean_dict)
+Use code with caution.
+
+Key Comparison for 2025
+Feature 	Imputer (ML)	Manual fillna
+Performance	Optimized for large data	Slower for many columns
+Ease of Use	Single configuration object	Requires manual mapping
+Scalability	Handles 100s of columns easily	Can hit optimizer limits in loops
+Should we discuss how to apply these averages by group (e.g., filling a student's missing score with the average of their specific class instead of the whole school)?
+
+In 2025, the standard way to impute null values using group-specific averages (e.g., filling a student's score with their class average) is by using Window Functions.
+This approach is highly performant because it calculates the average across a partition of data and applies it row-by-row without needing a slow join or collect operation. 
+Implementation: Group-Based Mean Imputation
+To fill nulls with the average of a specific group (like class_id), follow this pattern:
+python
+from pyspark.sql import Window
+from pyspark.sql.functions import col, avg, coalesce
+
+# 1. Define the Window partitioned by the group column
+window_spec = Window.partitionBy("class_id")
+
+# 2. Calculate the group average and use coalesce to fill nulls
+# Using coalesce(original, group_avg) ensures only nulls are replaced
+score_cols = ["math_score", "science_score"]
+
+for c in score_cols:
+    group_avg = avg(col(c)).over(window_spec)
+    df = df.withColumn(c, coalesce(col(c), group_avg))
+Use code with caution.
+
+Key Components
+Window.partitionBy("class_id"): Tells Spark to calculate statistics independently for each class.
+avg(col(c)).over(window_spec): Calculates the mean of non-null values within that specific group.
+coalesce(): This is the modern 2025 "best practice" for dynamic filling. It prioritizes the original score and only uses the calculated group average if the original is null. 
+Comparison: Global vs. Group Imputation
+Feature	Global Imputation (Imputer)	Group Imputation (Window)
+Logic	Uses average of the entire column	Uses average of the specific subgroup
+Accuracy	Lower (ignores group differences)	Higher (preserves group-level trends)
+Complexity	Simple configuration	Requires window partitioning
+Would you like to see how to handle cases where an entire group is null (meaning the group average itself is null)?
+
+If an entire group (e.g., a specific class_id) consists of only null values, the group-specific average will itself be null. In 2025 data engineering, the robust solution is to use a multi-level fallback (coalesce) strategy. 
+Multi-Level Imputation Strategy
+You can chain multiple layers of imputation so that if the group average fails, it falls back to the global average, and finally to a static default (like 0).
+python
+from pyspark.sql import Window
+from pyspark.sql.functions import col, avg, coalesce, lit
+
+score_cols = ["math_score", "science_score"]
+window_spec = Window.partitionBy("class_id")
+
+for c in score_cols:
+    # 1. Calculate the group average (null if whole group is missing)
+    group_avg = avg(col(c)).over(window_spec)
+    
+    # 2. Calculate the global average (constant across the entire DF)
+    global_avg = df.select(avg(col(c))).first()[0]
+    
+    # 3. Coalesce: Original > Group Average > Global Average > Static Value
+    df = df.withColumn(c, 
+        coalesce(col(c), group_avg, lit(global_avg), lit(0))
+    )
+Use code with caution.
+
+Why this is necessary
+Missing Level	What Happens	Resulting Value
+Row only	coalesce finds group_avg	Class Average
+Entire Group	group_avg is null; coalesce finds global_avg	Global Average
+Entire Dataset	global_avg is null; coalesce finds lit(0)	0
+Pro-Tip: Efficiency for 2025
+Calculating global_avg using .first()[0] triggers an action (computation), which can be slow on massive datasets. If performance is critical, you can replace the global average with a Window function without partition to keep everything within a single lazy execution plan:
+python
+global_avg_col = avg(col(c)).over(Window.partitionBy())
+df = df.withColumn(c, coalesce(col(c), group_avg, global_avg_col, lit(0)))
+Use code with caution.
+
+Would you like to see how to log or flag these imputed rows so you can track how much of your final data was "estimated" vs. "real"?
+
+To maintain data integrity in 2025 workflows, it is best practice to create a "provenance" or "flag" column. This allows you to distinguish between original raw data and values generated through imputation.
+The Boolean Flag Pattern
+By creating a flag column before you fill the nulls, you preserve a permanent record of which rows were estimated.
+python
+from pyspark.sql.functions import col, when, coalesce, avg, lit
+from pyspark.sql import Window
+
+score_cols = ["math_score", "science_score"]
+window_spec = Window.partitionBy("class_id")
+
+for c in score_cols:
+    # 1. Create the flag: True if original data is missing
+    df = df.withColumn(f"{c}_imputed", col(c).isNull())
+    
+    # 2. Calculate averages for fallback
+    group_avg = avg(col(c)).over(window_spec)
+    
+    # 3. Perform the multi-level imputation
+    df = df.withColumn(c, coalesce(col(c), group_avg, lit(0)))
+
+# Optional: Create a single summary flag for the whole row
+df = df.withColumn("any_score_imputed", 
+    col("math_score_imputed") | col("science_score_imputed")
+)
+Use code with caution.
+
+Advanced: Categorical Quality Flags
+Instead of a simple Boolean, you can use a string flag to track which level of imputation was used. This is particularly useful for debugging 2025 machine learning pipelines.
+python
+for c in score_cols:
+    group_avg = avg(col(c)).over(window_spec)
+    
+    df = df.withColumn(f"{c}_data_quality", 
+        when(col(c).isNotNull(), "ORIGINAL")
+        .when(group_avg.isNotNull(), "GROUP_ESTIMATED")
+        .otherwise("GLOBAL_DEFAULT")
+    )
+    
+    # Apply the actual fill
+    df = df.withColumn(c, coalesce(col(c), group_avg, lit(0)))
+Use code with caution.
+
+Why Logging Imputation Matters
+Model Bias Tracking: Machine learning models can behave differently on imputed data; flags allow you to filter or weight these rows differently during training.
+Audit Readiness: In regulated industries (finance, healthcare), you must be able to prove which data points were provided by the user versus calculated by the system.
+Accuracy Analysis: You can group by the flag to see if "imputed" students have significantly different outcomes than "original" students, which helps validate your imputation strategy.
+Would you like to see how to generate a summary report (e.g., "15% of Math scores were imputed") using these new flags?
+
+In 2025, the standard way to generate an imputation summary report is to aggregate your Boolean flags using the mean function. In PySpark, calculating the average of a Boolean column (True/False) automatically yields the percentage of rows that are True. 
+Implementation: Imputation Summary Report
+This snippet calculates both the count and percentage of imputed values for every score column in your dataset.
+python
+from pyspark.sql.functions import mean, count, when, col, round
+
+# 1. Identify your flag columns (created in the previous step)
+flag_cols = [c for c in df.columns if c.endswith("_imputed")]
+
+# 2. Perform aggregation
+# mean(col.cast("int")) converts True to 1 and False to 0, creating a percentage
+report = df.agg(*(
+    round(mean(col(c).cast("int")) * 100, 2).alias(f"pct_{c}")
+    for c in flag_cols
+))
+
+report.show()
+Use code with caution.
+
+Example Report Output
+pct_math_score_imputed	pct_science_score_imputed
+15.42	8.10
+Advanced: Group-Wise Report
+If you want to see if specific classes have higher rates of missing data, simply add a groupBy. 
+python
+# View imputation rates per class
+df.groupBy("class_id").agg(*(
+    round(mean(col(c).cast("int")) * 100, 2).alias(f"pct_{c}")
+    for c in flag_cols
+)).show()
+Use code with caution.
+
+Why use mean() on Booleans?
+Performance: This is a single-pass aggregation that Spark can easily distribute across clusters.
+Actionability: Seeing a high percentage (e.g., >30%) in this report tells you that your group or global averages might be skewing your final results, signaling a need for better data collection. 
+Would you like to see how to "filter out" rows that have more than a certain percentage of imputed data (e.g., dropping students missing >50% of their scores)?
+

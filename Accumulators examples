@@ -1,0 +1,94 @@
+Sure! Here’s a collection of examples showing different ways accumulators can be used in PySpark:
+1. Sum of numbers (basic accumulator)
+pythonfrom pyspark import SparkContext
+sc = SparkContext("local", "Accumulator Example")
+acc = sc.accumulator(0)
+
+nums = [1, 2, 3, 4]
+rdd = sc.parallelize(nums)
+
+def add_num(x):
+    acc += x
+rdd.foreach(add_num)
+print("Sum:", acc.value)
+
+2. Counting errors
+pythonerror_count = sc.accumulator(0)
+
+def process(record):
+    try:
+        int(record)
+    except ValueError:
+        error_count += 1
+
+rdd = sc.parallelize(["10", "abc", "20"])
+rdd.foreach(process)
+print("Errors:", error_count.value)
+
+3. Tracking processed records across transformations
+pythonprocessed_count = sc.accumulator(0)
+
+def mapper(x):
+    processed_count += 1
+    return x * 2
+
+rdd = sc.parallelize([1, 2, 3])
+rdd.map(mapper).collect()
+print("Processed records:", processed_count.value)
+
+4. Multiple accumulators for different categories
+pythoneven_count = sc.accumulator(0)
+odd_count = sc.accumulator(0)
+
+def categorize(x):
+    if x % 2 == 0:
+        even_count += 1
+    else:
+        odd_count += 1
+
+rdd = sc.parallelize([1, 2, 3, 4, 5])
+rdd.foreach(categorize)
+print("Even:", even_count.value, "Odd:", odd_count.value)
+
+5. Using `AccumulatorV2` for custom data types
+pythonfrom pyspark import AccumulatorV2
+
+class SetAccumulator(AccumulatorV2):
+    def __init__(self, initial=None):
+        self._set = set(initial or [])
+    def isZero(self):
+        return len(self._set) == 0
+    def copy(self):
+        return SetAccumulator(self._set)
+    def reset(self):
+        self._set.clear()
+    def add(self, value):
+        self._set.add(value)
+    def merge(self, other):
+        self._set.update(other._set)
+    def value(self):
+        return self._set
+
+sc = SparkContext("local", "Custom Accumulator")
+unique_words_acc = sc.register(SetAccumulator())
+
+def collect_words(word):
+    unique_words_acc.add(word)
+
+rdd = sc.parallelize(["apple", "banana", "apple"])
+rdd.foreach(collect_words)
+print("Unique words:", unique_words_acc.value)
+
+6. Debugging data pipeline
+pythondebug_acc = sc.accumulator(0)
+
+def debug_step(x):
+    debug_acc += 1
+    return x
+
+rdd = sc.parallelize(range(100))
+rdd.map(debug_step).filter(lambda x: x % 10 == 0).collect()
+print("Records through debug step:", debug_acc.value)
+
+These examples cover counters, sums, category tallies, unique value tracking with `AccumulatorV2`, and debugging metrics. Accumulators are best suited for metrics/monitoring rather than core data processing logic.
+Do you want me to also give real-world monitoring examples where accumulators track processing progress for jobs in production?

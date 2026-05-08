@@ -1,5 +1,3 @@
-Below is a **complete, exam‑ready list of PySpark RDD transformations**, with **clear definitions and simple examples**. This covers **all commonly used RDD transformations you’re expected to know** for interviews and real usage.
-
 > ✅ **Note:**
 >
 > *   **Transformations are lazy** (they don’t execute until an action is called)
@@ -368,11 +366,5 @@ rdd.sample(False, 0.5).collect()
 > “RDD transformations are lazy operations that create new RDDs. Narrow transformations don’t require shuffles, while wide transformations do, which impacts performance.”
 
 ***
-
-If you want next:
-✅ **Complete list of RDD actions**  
-✅ **Transformation vs action DAG explanation**  
-✅ **Cheat sheet PDF format**  
-✅ **Mock Spark interview (advanced)**
 
 Just tell me 🚀

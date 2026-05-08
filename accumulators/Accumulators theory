@@ -1,0 +1,7 @@
+In PySpark, accumulators are variables that can be used for aggregating information across multiple nodes in a cluster during parallel processing. They are typically used for counters and sums, as they allow for safe and efficient updates from multiple tasks.
+
+Key points:
+
+Accumulators are write-only from the worker nodes and read-only on the driver.
+They are mainly used for debugging, monitoring, and non-essential computations because their updates are not guaranteed to be exactly-once.
+They help monitor execution by tracking metrics like number of processed records, errors, etc.

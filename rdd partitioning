@@ -1,0 +1,21 @@
+diffference between 
+spark.sparkContext.parallelize([json_str])
+spark.sparkContext.parallelize([json_str],1)
+
+The difference lies in the second parameter — `spark.sparkContext.parallelize([json_str])` uses the default number of partitions (which is usually based on the cluster's settings), while `spark.sparkContext.parallelize([json_str], 1)` explicitly sets the number of partitions to 1.
+
+
+Partitions determine how the data is split across executors for parallel processing:
+
+
+Default (no second argument): Spark decides the number of partitions, often `sc.defaultParallelism`, based on available cores.
+Explicit `1`: All the data is loaded into a single partition, meaning only one task will process it. This can reduce parallelism but might be useful for small datasets or cases where you want to control ordering and ensure all data is in one chunk.
+
+In short: the second version forces the RDD to have one partition, while the first lets Spark decide.
+
+
+
+
+
+
+

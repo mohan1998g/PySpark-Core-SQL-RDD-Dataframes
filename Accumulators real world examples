@@ -1,0 +1,76 @@
+Here are some real-world monitoring examples of using accumulators in PySpark:
+1. Track number of invalid records during ETL
+pythoninvalid_count = sc.accumulator(0)
+
+def validate_record(record):
+    if not record.get('id') or not record.get('value'):
+        invalid_count += 1
+        return None
+    return record
+
+rdd = sc.parallelize(data)
+clean_rdd = rdd.map(validate_record).filter(lambda x: x is not None)
+print("Invalid records:", invalid_count.value)
+
+Use case: Monitoring data quality issues while cleansing large datasets.
+2. Count slow-processing records
+pythonslow_count = sc.accumulator(0)
+
+def process_with_timer(record):
+    import time
+    start = time.time()
+    # simulate processing
+    time.sleep(0.01)
+    end = time.time()
+    if end - start > 0.005:
+        slow_count += 1
+    return record
+
+rdd.foreach(process_with_timer)
+print("Slow records:", slow_count.value)
+
+Use case: Identifying performance bottlenecks in a distributed job.
+3. Monitor number of retries/reprocess attempts
+pythonretry_count = sc.accumulator(0)
+
+def process_record(record):
+    try:
+        # processing logic
+        pass
+    except Exception:
+        retry_count += 1
+        # retry logic
+
+rdd.foreach(process_record)
+print("Retries:", retry_count.value)
+
+Use case: Tracking failure/retry rates for operations.
+4. Keep a metric of filtered-out records
+pythonfiltered_count = sc.accumulator(0)
+
+def filter_and_count(record):
+    if record['status'] == 'inactive':
+        filtered_count += 1
+        return False
+    return True
+
+active_rdd = rdd.filter(filter_and_count)
+print("Filtered records:", filtered_count.value)
+
+Use case: Reporting how much data gets discarded.
+5. Logging number of duplicate records detected
+pythondup_count = sc.accumulator(0)
+seen_ids = set()
+
+def check_duplicate(record):
+    if record['id'] in seen_ids:
+        dup_count += 1
+    else:
+        seen_ids.add(record['id'])
+    return record
+
+rdd.foreach(check_duplicate)
+print("Duplicate records:", dup_count.value)
+
+Use case: Monitoring duplicate data issues in ingestion pipelines.
+Summary: In production, accumulators often serve as lightweight counters to measure data quality, pipeline performance, and operational statistics without affecting the actual output data. If you want, I can give you a complete ETL pipeline example where accumulators track multiple metrics together.

@@ -91,3 +91,25 @@ df_large.join(broadcast(df_small), "id")
     *   Behaves like a **narrow transformation**, though technically still classified under joins
 
 ***
+
+The short answer is **no, joins are not always wide transformations.**
+While joins in distributed frameworks like Apache Spark are *usually* wide transformations because they require moving data across the network (shuffling), there is a major exception: **Broadcast Joins** (also known as Map-Side Joins).
+Here is how it breaks down based on the strategy Spark chooses to use:
+## 1. Narrow Transformation: Broadcast Hash Join
+If one of your datasets is small enough to fit entirely into the memory of a single worker node, Spark will perform a **Broadcast Hash Join**.
+Instead of shuffling both datasets across the network, Spark copies (broadcasts) the small dataset to every single worker node. Each worker then joins its local partition of the large dataset with the local copy of the small dataset.
+ * **Why it's narrow:** There is **no shuffle** of the large dataset. Each partition of the large dataset is processed independently and stays exactly where it is. Data only flows from the driver to the executors, not between executors.
+## 2. Wide Transformation: Shuffle Hash / Sort-Merge Joins
+If both datasets are large and cannot fit into memory, Spark has to use a **Sort-Merge Join** or a **Shuffle Hash Join**.
+To match rows with the same join keys, Spark must ensure that all rows with the same key end up on the exact same worker node. To do this, it hashes the join key and redistributes the data across the cluster.
+ * **Why it's wide:** This triggers a **shuffle**, which is the defining characteristic of a wide transformation. Data from multiple input partitions is mixed and moved across the network to create new output partitions.
+## At a Glance: Join Types vs. Transformations
+| Join Strategy | Dataset Conditions | Transformation Type | Triggers Shuffle? |
+|---|---|---|---|
+| **Broadcast Hash Join** | One dataset is small (Default < 10MB) | **Narrow** | ✗ No |
+| **Sort-Merge Join** | Both datasets are large (Default strategy) | **Wide** | ✓ Yes |
+| **Shuffle Hash Join** | Both datasets are large, but data is well-distributed | **Wide** | ✓ Yes |
+> **Pro Tip:** You can explicitly force a narrow join in your code using the broadcast() function if you know one DataFrame is small, bypassing the expensive wide shuffle phase entirely:
+> large_df.join(broadcast(small_df), "join_key")
+> 
+

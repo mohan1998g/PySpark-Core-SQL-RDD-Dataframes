@@ -1,4 +1,6 @@
 when we use spark dsl and withColumn in expr only starting and ending quotes should be double else should be single
 
-in group by statement all the columns in select either shold be there or thy should be aggregated in select else error will come
+in group by statement all the columns in select either should be there or they should be aggregated in select 
+else error will come
 
+alias names in select statement won't work in where clause.

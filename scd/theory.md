@@ -1,7 +1,3 @@
-Below is a **complete, real‑world–grade answer** covering **all three items** you requested, exactly at the level expected in **TCS / enterprise data‑engineering interviews**.
-
-***
-
 # ✅ 1. Real Company‑Level SCD Type‑2 Pipeline Design
 
 This is how SCD2 is actually implemented in **banks, retail, telecom, and insurance clients**.

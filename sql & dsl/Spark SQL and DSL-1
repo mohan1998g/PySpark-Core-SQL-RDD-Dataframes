@@ -1,0 +1,246 @@
+https://www.youtube.com/watch?v=yVOTP0gy7TU
+
+data = [
+    (0, "06-26-2011", 300.4, "Exercise", "GymnasticsPro", "cash"),
+    (1, "05-26-2011", 200.0, "Exercise Band", "Weightlifting", "credit"),
+    (2, "06-01-2011", 300.4, "Exercise", "Gymnastics Pro", "cash"),
+    (3, "06-05-2011", 100.0, "Gymnastics", "Rings", "credit"),
+    (4, "12-17-2011", 300.0, "Team Sports", "Field", "cash"),
+    (5, "02-14-2011", 200.0, "Gymnastics", None, "cash"),
+    (6, "06-05-2011", 100.0, "Exercise", "Rings", "credit"),
+    (7, "12-17-2011", 300.0, "Team Sports", "Field", "cash"),
+    (8, "02-14-2011", 200.0, "Gymnastics", None, "cash")
+]
+df = spark.createDataFrame(data, ["id", "tdate", "amount", "category", "product", "spendby"])
+df.show()
+df.createOrReplaceTempView("df")
+data2 = [
+    (4, "12-17-2011", 300.0, "Team Sports", "Field", "cash"),
+    (5, "02-14-2011", 200.0, "Gymnastics", None, "cash"),
+    (6, "02-14-2011", 200.0, "Winter", None, "cash"),
+    (7, "02-14-2011", 200.0, "Winter", None, "cash")
+]
+df1 = spark.createDataFrame(data2, ["id", "tdate", "amount", "category", "product", "spendby"])
+df1.show()
+df1.createOrReplaceTempView("df1")
+data4 = [
+    (1, "raj"),
+    (2, "ravi"),
+    (3, "sai"),
+    (5, "rani")
+]
+cust = spark.createDataFrame(data4, ["id", "name"])
+cust.show()
+cust.createOrReplaceTempView("cust")
+data3 = [
+    (1, "mouse"),
+    (3, "mobile"),
+    (7, "laptop")
+]
+prod = spark.createDataFrame(data3, ["id", "product"])
+prod.show()
+prod.createOrReplaceTempView("prod")
+
+
+print("All columns from df")
+spark.sql("select * from df ").show()
+df.select("id", "tdate", "amount", "category", "product", "spendby").show()
+df.select("*").show()
+
+print("id and tdate order by id")
+spark.sql("select id,tdate from df order by id").show()
+df.select("id", "tdate").orderBy("id").show()
+
+print("id tdate category order by id category  exercise")
+spark.sql("select id,tdate,category from df "
+          "where category='Exercise' order by id").show()
+df.select("id", "tdate", "category").filter("category = 'Exercise'").orderBy("id").show()
+
+print(" id,tdate,category,spendby category='Exercise' and spendby='cash'")
+spark.sql("select id,tdate,category,spendby from df where category='Exercise' and spendby='cash' ").show()
+df.select("id", "tdate", "category", "spendby").where("category='Exercise' and spendby='cash'").show()
+
+print("category in ('Exercise','Gymnastics')")
+spark.sql("select * from df where category in ('Exercise','Gymnastics')").show()
+(df.select("id", "tdate", "amount", "category", "product", "spendby")
+ .filter("category in ('Exercise','Gymnastics')").show())
+
+print("product like ('%Gymnastics%')")
+spark.sql("select * from df where product like ('%Gymnastics%')").show()
+df.select("id", "tdate", "amount", "category", "product", "spendby").where("product like ('%Gymnastics%')").show()
+
+print("category != 'Exercise'")
+spark.sql("select * from df where category != 'Exercise'").show()
+df.select("id", "tdate", "amount", "category", "product", "spendby").filter("category != 'Exercise'").show()
+
+print("category not in ('Exercise','Gymnastics')")
+spark.sql("select * from df where category not in ('Exercise','Gymnastics')").show()
+(df.select("id", "tdate", "amount", "category", "product", "spendby")
+ .filter("category not in ('Exercise','Gymnastics')").show())
+
+print("product is null")
+spark.sql("select * from df where product is null").show()
+df.select("id", "tdate", "amount", "category", "product", "spendby").filter("product is null").show()
+
+print("max(id)")
+spark.sql("select max(id) from df ").show()
+df.agg(max("id").alias("max_id")).show()
+
+print("min(id)")
+spark.sql("select min(id) from df ").show()
+df.agg(min("id").alias("min_id")).show()
+
+print("count(1)")
+spark.sql("select count(1) from df ").show()
+df.agg(count("id").alias("count_id")).show()
+
+print("status column 1 and 0")
+spark.sql("select *,case when spendby='cash' then 1 else 0 end as status from df ").show()
+df.withColumn("status", expr("case when spendby ='cash' then 1 else 0 end")).show()
+df.select(col(*), expr("case when spendby ='cash' then 1 else 0 end").alias("status")).show()
+df.select(col(*),when(spendby = 'cash', 1).otherwise(0).alias('status')).show()
+
+print("concat(id,'-',category)")
+spark.sql("select concat(id,'-',category) as concat from df ").show()
+df.withColumn("concat", expr("concat(id,'-',category)")).show()
+
+print("concat_ws('-',id,category,product)")
+spark.sql("select concat_ws('-',id,category,product) as concat from df ").show()
+df.withColumn("concat", expr("concat_ws('-',id,category,product)")).show()
+
+print("lower the category")
+spark.sql("select category,lower(category) as lower from df ").show()
+df.withColumn("lower", expr("lower(category)")).select("category", "lower").show()
+
+print("ceil the amount")
+spark.sql("select amount,ceil(amount) from df").show()
+df.withColumn("ceil_amount", expr("ceil(amount)")).select("amount", "ceil_amount").show()
+
+print("round the amount")
+spark.sql("select amount,round(amount) from df").show()
+df.withColumn("round", expr("round(amount)")).select("round", "amount").show()
+
+print("coalesce the product")
+spark.sql("select coalesce(product,'NA') from df").show()
+df.withColumn("coalesce_product", expr("coalesce(product, 'NA')")).show()
+
+print("trim of product")
+spark.sql("select trim(product) from df").show()
+df.withColumn("trim", expr("trim(product)")).show()
+
+print("distinct")
+spark.sql("select distinct category,spendby from df").show()
+df.select("category", "spendby").distinct().show()
+
+print("substring(trim(product),1,10)")
+spark.sql("select substring(trim(product),1,10) from df").show()
+df.withColumn("substring", expr("substring(trim(product),1,10)")).show()
+
+print("SUBSTRING_INDEX(category,' ',1)")
+spark.sql("select SUBSTRING_INDEX(category,' ',1) as spl from df").show()
+df.withColumn("spl", expr("SUBSTRING_INDEX(category,' ',1)")).show()
+
+add split function
+
+print("union all")
+spark.sql("select * from df union all select * from df1").show()
+df.unionAll(df1).show()
+
+union - duplicate rows are removed from the final result
+unionAll - duplicate rows are present in the final result
+
+print("union")
+spark.sql("select * from df union select * from df1 order by id").show()
+df.union(df1).orderBy("category").show()
+
+print("sum group by")
+spark.sql("select category, sum(amount) as total from df group by category").show()
+df.groupby("category").agg(sum("amount").alias("total")).show()
+
+print("sum group by")
+spark.sql("select category,spendby,sum(amount) as total from df group by category,spendby").show()
+df.groupby("category", "spendby").agg(sum("amount").alias("total")).select("category", "spendby", "total").show()
+
+print("sum count group by")
+spark.sql("select category,spendby,sum(amount) As total,count(amount) as cnt from df group by category,spendby").show()
+(df.groupby("category", "spendby").agg(sum("amount").alias("total"), count("amount").alias("cnt"))
+ .select("category", "spendby", "total", "cnt").show())
+
+print("max group by")
+spark.sql("select category, max(amount) as max from df group by category").show()
+df.groupby("category").agg(max("amount").alias("max")).select("category", "max").show()
+
+print("max group by order by")
+spark.sql("select category, max(amount) as max from df group by category order by category").show()
+df.groupby("category").agg(max("amount").alias("max")).orderBy("category").select("category", "max").show()
+
+print("max group by order by desc")
+spark.sql("select category, max(amount) as max from df group by category order by category desc").show()
+df.groupby("category").agg(max("amount").alias("max")).orderBy(col("category").desc()).select("category", "max").show()
+
+# Defined My Window
+window = Window.partitionBy("category").orderBy(col("amount").desc())
+window functions can also be written as 
+df.withColumn("row_number1", expr("row_number() over (partition by category order by amount)")).show()
+print("row number")
+spark.sql("SELECT category,amount, row_number() "
+          "OVER ( partition by category order by amount desc ) AS row_number FROM df").show()
+df.withColumn("row_number", row_number().over(window)).select("category", "amount", "row_number").show()
+df.withColumn("row_number", row_number().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "row_number").show()
+
+print("dense rank")
+spark.sql("SELECT category,amount, dense_rank() "
+          "OVER ( partition by category order by amount desc ) AS dense_rank FROM df").show()
+df.withColumn("dense_rank", dense_rank().over(window)).select("category", "amount", "dense_rank").show()
+df.withColumn("dense_rank", dense_rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "dense_rank").show()
+
+print("rank")
+spark.sql("SELECT category,amount, rank()"
+          "OVER ( partition by category order by amount desc ) AS rank FROM df").show()
+df.withColumn("rank", rank().over(window)).select("category", "amount", "rank").show()
+df.withColumn("rank", rank().over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "rank").show()
+
+print("lead")
+spark.sql("SELECT category,amount, lead(amount) "
+          "OVER ( partition by category order by amount desc ) AS lead FROM df").show()
+df.withColumn("lead", lead(col("amount")).over(window)).select("category", "amount", "lead").show()
+df.withColumn("lead", lead(col("amount")).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lead").show()
+
+print("lag")
+spark.sql("SELECT category,amount, lag(amount) "
+          "OVER ( partition by category order by amount desc ) AS lag FROM df").show()
+df.withColumn("lag", lag("amount", 2).over(window)).select("category", "amount", "lag").show()
+df.withColumn("lag", lag("amount", 2).over(Window.partitionBy("category").orderBy(col("amount").desc()))).select("category", "amount", "lag").show()
+
+print("having")
+spark.sql("select category,count(category) as cnt from df group by category having count(category)>1").show()
+df.groupby("category").agg(count("category").alias("cnt")).where("cnt > 1").show()
+
+print("inner join")
+spark.sql("select a.id,a.name,b.product from cust a join prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "inner").show()
+
+print("left Join")
+spark.sql("select a.id,a.name,b.product from cust a left join prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "left").show()
+
+print("right")
+spark.sql("select a.id,a.name,b.product from cust a right join prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "right").show()
+
+print("full join")
+spark.sql("select a.id,a.name,b.product from cust a full join prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "full").show()
+
+print("left anti")
+spark.sql("select a.id,a.name from cust a LEFT ANTI JOIN prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "left_anti").show()
+
+print("left semi")
+spark.sql("select a.id,a.name from cust a LEFT SEMI JOIN prod b on a.id=b.id").show()
+cust.join(prod, ["id"], "left_semi").show()
+
+spark.sql("select id,tdate,from_unixtime(unix_timestamp(tdate,'MM-dd-yyyy'),'yyyy-MM-dd') as con_date from df").show()
+spark.sql("""select sum(amount) as total , con_date from(select id,tdate,
+from_unixtime(unix_timestamp(tdate,'MM-dd-yyyy'),'yyyy-MM-dd') 
+as con_date,amount,category,product,spendby from df) group by con_date""").show()

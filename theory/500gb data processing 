@@ -1,0 +1,90 @@
+For a 500 GB dataset, you should avoid operations that force all data onto a single node (such as collect() or unnecessary global sorting). In PySpark, there are a few good approaches.
+
+Approach 1: Window Function (most common)
+
+Partition by user_id and transaction date, then order by timestamp descending.
+
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+df = df.withColumn("txn_date", F.to_date("transaction_timestamp"))
+
+window_spec = Window.partitionBy("user_id", "txn_date") \
+                    .orderBy(F.col("transaction_timestamp").desc())
+
+result = (
+    df.withColumn("rn", F.row_number().over(window_spec))
+      .filter(F.col("rn") == 1)
+      .drop("rn")
+)
+
+Pros:
+
+Easy to understand.
+
+Works well for moderate-to-large datasets.
+
+
+Cons:
+
+Window functions require sorting within each partition, which is expensive on very large datasets.
+
+
+
+---
+
+Approach 2: Aggregate + Join (often better for huge datasets)
+
+First, compute the maximum timestamp per user per day, then join back to get the complete record.
+
+from pyspark.sql import functions as F
+
+df = df.withColumn("txn_date", F.to_date("transaction_timestamp"))
+
+latest = (
+    df.groupBy("user_id", "txn_date")
+      .agg(F.max("transaction_timestamp").alias("max_ts"))
+)
+
+result = (
+    df.join(
+        latest,
+        (df.user_id == latest.user_id) &
+        (df.txn_date == latest.txn_date) &
+        (df.transaction_timestamp == latest.max_ts),
+        "inner"
+    )
+)
+
+Pros:
+
+Usually more scalable than a window function.
+
+Aggregations are highly optimized in Spark.
+
+
+
+---
+
+Performance optimizations for 500 GB
+
+Partition the data appropriately (for example, by transaction date if applicable).
+
+Increase shuffle partitions if needed:
+
+spark.conf.set("spark.sql.shuffle.partitions", 1000)
+
+(The exact value depends on your cluster size.)
+
+Avoid repartition() unless necessary, as it causes a full shuffle.
+
+If reading from Parquet/Delta/Iceberg, read only the required columns (user_id, transaction_timestamp, transaction_id) to reduce I/O.
+
+If data is already partitioned by date, filter the required dates first to minimize the amount of data processed.
+
+
+Interview answer
+
+If this is asked in an interview, you can say:
+
+> "For a 500 GB dataset, I'd avoid a full window sort if possible. I'd first perform a groupBy(user_id, transaction_date) with max(transaction_timestamp) to identify the latest transaction timestamp for each user per day. Then I'd join the aggregated result back to the original dataset to retrieve the complete transaction record. I'd also ensure efficient partitioning, tune shuffle partitions based on the cluster, and leverage Parquet/Delta/Iceberg partition pruning to minimize I/O. This approach scales better than sorting every record with a window function."

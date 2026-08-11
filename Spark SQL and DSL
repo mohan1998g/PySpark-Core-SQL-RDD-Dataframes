@@ -181,7 +181,7 @@ df.groupby("category").agg(max("amount").alias("max")).orderBy(col("category").d
 # Defined My Window
 window = Window.partitionBy("category").orderBy(col("amount").desc())
 
-other ways to write are
+window functions can also be written as 
 df.withColumn("row_number1", expr("row_number() over (partition by category order by amount)")).show()
 
 print("row number")

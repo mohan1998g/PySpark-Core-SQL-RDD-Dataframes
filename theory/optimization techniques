@@ -1,7 +1,23 @@
 Optimizing PySpark applications is essential for improving performance, resource utilization, and cost efficiency, especially when working with large datasets. 
 Here are some key optimization techniques and best practices in PySpark:
 
+1. Partitioning and Caching
+2. Avoiding Shuffles
+3. Optimizing Data Formats
+4. Filtering Data Early
+5. Using Efficient DataFrame Operations
+6. Optimizing Joins
+7. Using Window Functions Efficiently
+8. Handling Skewed Data
+9. Optimizing Aggregations
+10. Using PySpark’s Catalyst Optimizer and Tungsten Engine
+11. Avoid Using collect() on Large Datasets
+12. Adaptive Query Execution (AQE)
+13. Tuning Spark Configuration Settings
+14. Use broadcast variables for data 
+15. Optimize File and Partition Sizes in Storage
 
+details
 1. Partitioning and Caching
 
 Partitioning:
@@ -141,10 +157,9 @@ Instead, use actions like take() or head() to view only a sample of the data.
 12. Adaptive Query Execution (AQE)
 Adaptive Query Execution (AQE) is a feature in Spark 3.x that dynamically optimizes query plans based on runtime statistics.
 
-Enable AQE by setting Spark configurations:
+AQE is enabled by default since spark 3.2 releases
 
 Example:
-
 
 spark.conf.set("spark.sql.adaptive.enabled", "true")
 

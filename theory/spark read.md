@@ -147,6 +147,7 @@ Common options:
 .option("quote", '"')
 .option("escape", '"')
 .option("nullValue", "NULL")
+.option("multiline", "true")
 .schema(schema)
 ```
 

@@ -117,6 +117,18 @@ df = spark.read \
     .load("/data/customers")
 ```
 
+Or:
+when we do not want to infer schema from a file, we can create a list of columns and then give it to df as 
+
+```python
+columns = ["name", "age", "gender",....]
+df = spark.read \
+    .format("csv") \
+    .load("/data/customers") \
+    .toDF(*columns)
+```
+
+
 Common options:
 
 ```python

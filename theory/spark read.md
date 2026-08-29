@@ -123,6 +123,7 @@ Common options:
 .option("header", "true")
 .option("inferSchema", "true")
 .option("delimiter", ",")
+.option("sep", ",")
 .option("quote", '"')
 .option("escape", '"')
 .option("nullValue", "NULL")

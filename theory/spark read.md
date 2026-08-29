@@ -147,8 +147,17 @@ Common options:
 .option("quote", '"')
 .option("escape", '"')
 .option("nullValue", "NULL")
-.option("multiline", "true")
+.option("multiline", "true") # when one record spans more than 1 line we make it true
+.option("lineSep", "\n") # tells Spark what character/string separates one record from the next. \n is the default else it should be given
 .schema(schema)
+| ----------- | ----------------------------------------------------- | ---------- |
+| Option      | Purpose                                               | Example    |
+| ----------- | ----------------------------------------------------- | ---------- |
+| `sep`       | Separates **columns**                                 | `,`        |
+| `lineSep`   | Separates **records/rows**                            | `\n`, `\|` |
+| `multiLine` | Allows one record to span **multiple physical lines** | `true`     |
+| ----------- | ----------------------------------------------------- | ---------- |
+
 ```
 
 ---

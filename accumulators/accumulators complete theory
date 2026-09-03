@@ -46,7 +46,7 @@ Driver’s `value` is only updated after actions (`collect`, `foreach`, etc.), n
 Not guaranteed exactly-once semantics if tasks retry.
 
 Example:
-pythonfrom pyspark import SparkContext
+from pyspark import SparkContext
 sc = SparkContext("local", "Acc Example")
 
 acc = sc.accumulator(0)
